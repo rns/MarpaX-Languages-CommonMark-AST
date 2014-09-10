@@ -1,3 +1,4 @@
+# utility to be used with runtests.pl of CommonMark's test suite
 use 5.010;
 use strict;
 use warnings;
