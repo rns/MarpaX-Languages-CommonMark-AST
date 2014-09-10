@@ -97,8 +97,10 @@ sub parse {
     eval {$r->read(\$input)} || warn "Parse failure, progress report is:\n" . $r->show_progress;
 
     my $ast = $r->value;
-    warn "No parse" unless defined $ast;
-    return;
+    unless (defined $ast){
+        warn "No parse";
+        return;
+    }
     
     if ( $r->ambiguity_metric() > 1 ){
         say "Ambiguous parse, use Marpa::R2::ASF, now dumping alternatives:" ;
