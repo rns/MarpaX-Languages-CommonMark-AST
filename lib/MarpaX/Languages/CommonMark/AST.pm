@@ -74,37 +74,46 @@ END_OF_SOURCE
     return $self;
 }
 
+sub preprocess{
+    my $input = shift;
+    $input =~ s/\t/    /g;
+    # todo: spec's "Line endings are replaced by newline characters (LF)."
+    return $input;
+}
+
 sub parse {
     my ( $self, $input ) = @_;
-
+    
+    # 2.1 Preprocessing
+    $input = preprocess $input;
+    
+    # get grammar, create recognizer and read input
     my $g = $self->{grammar};
 
     my $r = Marpa::R2::Scanless::R->new( { 
         grammar => $g,
     #    trace_terminals => 99
     } );
-    eval {$r->read(\$input)} || die "Parse failure, progress report is:\n" . $r->show_progress;
+    eval {$r->read(\$input)} || warn "Parse failure, progress report is:\n" . $r->show_progress;
 
-    my $ast;
-
+    my $ast = $r->value;
+    warn "No parse" unless defined $ast;
+    return;
+    
     if ( $r->ambiguity_metric() > 1 ){
         say "Ambiguous parse, use Marpa::R2::ASF, now dumping alternatives:" ;
         # for starters, use alternative 1
         # try to show ambiguitties better
-        $ast = ${ $r->value };
         my $v = $ast;
         my $i = 1;
         do {
             say "# Alternative ", $i++, ":", Dump $v;
-        } until ( $v = ${ $r->value() } );
-        say Dump $v;
+        } until ( $v = $r->value() );
+        say Dump ${$v};
         say "$i alternatives.";
     }
-    else{
-        $ast = ${ $r->value };
-    }
     
-    return $ast;
+    return ${ $ast };
 }
 
 sub html{
