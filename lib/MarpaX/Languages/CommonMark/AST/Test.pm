@@ -10,10 +10,18 @@ my $p = MarpaX::Languages::CommonMark::AST->new;
 
 sub filter {
     my $input = shift;
-#    say "filter: $input";
+
+#    warn "filter: $input";
     # turn tabs are embedded in test file to real tabs to test preprocessing
     $input =~ s/\\t/\t/g;
-#    say "filter: $input";
+    # handle quoted text
+    if ($input =~ m/q{(.+?)}/){
+        $input =~ s/^q{//;
+        $input =~ s/}$//;
+    }
+#    warn "filter: $input";
+
+    # get ast and conver to html
     my $ast = $p->parse($input);
     return $p->html($ast);
 }

@@ -10,20 +10,31 @@ plan tests => 1 * blocks;
 run_is input => 'expected';
 
 __END__
-
-=== Preprocessing
+ 
+=== Lists
 --- input filter
-\tfoo\tbaz\t\tbim
+- foo
+- bar
++ baz
 --- expected
-<pre><code>foo    baz        bim
-</code></pre>
+<ul>
+<li>foo</li>
+<li>bar</li>
+</ul>
+<ul>
+<li>baz</li>
+</ul>
 
-=== Preprocessing
+=== Lists
 --- input filter
-    a\ta
-    u\ta
+1. foo
+2. bar
+3) baz
 --- expected
-<pre><code>a    a
-u    a
-</code></pre>
-
+<ol>
+<li>foo</li>
+<li>bar</li>
+</ol>
+<ol start="3">
+<li>baz</li>
+</ol>

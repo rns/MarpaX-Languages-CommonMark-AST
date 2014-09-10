@@ -11,7 +11,7 @@ run_is input => 'expected';
 
 __END__
  
-=== Example 4
+=== Horizontal lines
 --- input filter
 ***
 ---
@@ -21,12 +21,27 @@ ___
 <hr />
 <hr />
 
-=== Example 5
+=== Wrong characters
 --- input filter
 +++
 --- expected
 <p>+++</p>
 
-    
+=== Wrong characters
+--- input filter
+q{===}
+--- expected
+<p>===</p>
+
+=== Not enough characters
+--- input filter
+--
+**
+__
+--- expected
+<p>--
+**
+__</p>
+
 
 

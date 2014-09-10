@@ -11,19 +11,19 @@ run_is input => 'expected';
 
 __END__
 
-=== Preprocessing
+=== indented code block
 --- input filter
-\tfoo\tbaz\t\tbim
+    a simple
+      indented code block
 --- expected
-<pre><code>foo    baz        bim
+<pre><code>a simple
+  indented code block
 </code></pre>
 
-=== Preprocessing
+=== An indented code block cannot interrupt a paragraph.
 --- input filter
-    a\ta
-    u\ta
+Foo
+    bar
 --- expected
-<pre><code>a    a
-u    a
-</code></pre>
-
+<p>Foo
+bar</p>
