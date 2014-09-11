@@ -18,9 +18,11 @@ sub new {
         source => \(<<'END_OF_SOURCE'),
 :default ::= action => [ name, value ]
 lexeme default = action => [ name, value ] latm => 1
-
+    
+    # Markdown
     document ::= block+
-
+    
+    # 3.2 Container blocks and leaf blocks
     block ::= leaf_block
     block ::= container_block
     block ::= inline
@@ -29,12 +31,6 @@ lexeme default = action => [ name, value ] latm => 1
     leaf_block ::= horizontal_rule
     leaf_block ::= paragraph
     leaf_block ::= indented_code_block
-    
-    # 5 Container blocks
-    container_block ::= list
-    
-    # 6 Inlines
-    inline ::= 'to be written'
     
     # 4.1 Horizontal rules
     horizontal_rule ~ hr_indentation hr_chars [\n]
@@ -52,6 +48,9 @@ lexeme default = action => [ name, value ] latm => 1
     underscores    ~ '___' underscore_seq
     underscore_seq ~ [_]*
 
+    # 4.2 ATX headers
+    # 4.3 Setext headers
+
     # 4.4 Indented code blocks
     indented_code_block ::= indented_chunks
 
@@ -66,6 +65,10 @@ lexeme default = action => [ name, value ] latm => 1
 
     blank_lines ~ [\n]+
     
+    # 4.5 Fenced code blocks
+    # 4.6 HTML blocks
+    # 4.7 Link reference definitions
+
     # 4.8 Paragraphs
     paragraph ::= lines                     
     paragraph ::= line indented_chunk_line  # Example 10, Example 58
@@ -74,6 +77,14 @@ lexeme default = action => [ name, value ] latm => 1
     line      ::= non_nl [\n]
     non_nl    ::= [^\n]+
 
+    # 4.9 Blank lines
+    
+    # 5 Container blocks
+    container_block ::= list
+
+    # 5.1 Block quotes
+    # 5.2 List items
+    
     # 5.3 Lists
     list ::= ordered_list 
     list ::= bullet_list 
@@ -98,6 +109,21 @@ lexeme default = action => [ name, value ] latm => 1
     bullet_list_marker ~ '-' | '+' | '*'
 
     list_marker_spaces ~ ' ' | '  ' | '   ' | '    '    
+
+    # 6 Inlines
+    inline ::= 'to be written'
+
+    # 6.1 Backslash escapes
+    # 6.2 Entities
+    # 6.3 Code span
+    # 6.4 Emphasis and strong emphasis
+    # 6.5 Links
+    # 6.6 Images
+    # 6.7 Autolinks
+    # 6.8 Raw HTML
+    # 6.9 Hard line breaks
+    # 6.10 Soft line breaks
+    # 6.11 Strings
 
 END_OF_SOURCE
     } );
