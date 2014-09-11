@@ -188,9 +188,11 @@ lexeme default = action => [ name, value ] latm => 1
     # 6 Inlines
     inline ::= emphasis
 
-    line  ~ non_nl [\n]
-
-    non_nl ~ [^\n]+
+#    line  ~ non_nl [\n]
+    line  ~ line_items [\n]
+    line_items ~ line_item+
+    line_item  ~ non_nl
+    non_nl     ~ [^\n]+
 
     # 6.1 Backslash escapes
     # 6.2 Entities
