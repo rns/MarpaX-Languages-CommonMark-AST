@@ -29,26 +29,32 @@ lexeme default = action => [ name, value ] latm => 1
     
     # 4 Leaf blocks
     leaf_block ::= horizontal_rule
-    leaf_block ::= paragraph
+    leaf_block ::= paragraphs
     leaf_block ::= indented_code_block
     
     # 4.1 Horizontal rules
-    horizontal_rule ~ hr_indentation hr_chars [\n]
-    horizontal_rule ~ hr_chars [\n]
+    horizontal_rule ::= hr_marker [\n]
+    
+    hr_marker ::= hr_indentation hr_chars
+    hr_marker ::= hr_chars
+    
+    hr_indentation ::= ' ' | '  ' | '   '
+    hr_chars       ::= stars | hyphens | underscores
 
-    hr_indentation ~ ' ' | '  ' | '   '
-    hr_chars       ~ stars | hyphens | underscores
+    stars    ::= star star star_seq
+    star_seq ::= star+
+    star     ~ '*'
 
-    stars    ~ '***' star_seq
-    star_seq ~ [\*]*
+    hyphens    ::= hyphen hyphen hyphen_seq
+    hyphen_seq ::= hyphen+
+    hyphen     ~ '-'
 
-    hyphens    ~ '---' hyphen_seq
-    hyphen_seq ~ [\-]*
-
-    underscores    ~ '___' underscore_seq
-    underscore_seq ~ [_]*
+    underscores    ::= underscore underscore underscore_seq
+    underscore_seq ::= underscore+
+    underscore ~ '_'
 
     # 4.2 ATX headers
+    
     # 4.3 Setext headers
 
     # 4.4 Indented code blocks
@@ -63,20 +69,40 @@ lexeme default = action => [ name, value ] latm => 1
     indented_code_block_spaces ~ '    ' space_seq
     space_seq                  ~ [ ]*
 
-    blank_lines ~ [\n]+
-    
     # 4.5 Fenced code blocks
     # 4.6 HTML blocks
     # 4.7 Link reference definitions
 
     # 4.8 Paragraphs
-    paragraph ::= lines                     
-    paragraph ::= line indented_chunk_line  # Example 10, Example 58
+    paragraphs ::= paragraph+
+    paragraph  ::= paragraph_lines blank_lines
+    paragraph  ::= paragraph_line indented_chunk_line  # Example 10, Example 58
 
-    lines     ::= line+
-    line      ::= non_nl [\n]
-    non_nl    ::= [^\n]+
+    paragraph_lines ::= paragraph_line+
 
+    blank_lines ~ [\n]*
+
+    # the blow line is here just to make more tests pass
+#    paragraph_line  ::= line # can start from anything but newline
+    
+    # sequences of non-blank lines that cannot be interpreted as 
+    # other kinds of blocks 
+    
+    # not a list
+    paragraph_line  ::= list_marker [^ ] line # can start from a list marker
+                                              # only if followed by a non-space
+    paragraph_line  ::= list_marker [\n]      # or a newline
+
+    list_marker ::= bullet_list_marker_hyphen
+    list_marker ::= bullet_list_marker_plus
+    list_marker ::= bullet_list_marker_star
+    list_marker ::= ordered_list_marker_period
+    list_marker ::= ordered_list_marker_bracket
+
+    # not a horizontal rule
+    paragraph_line  ::= hr_marker line   # can start from horizontal line marker
+                                         # only if followed by a non-newline
+    
     # 4.9 Blank lines
     
     # 5 Container blocks
@@ -89,29 +115,49 @@ lexeme default = action => [ name, value ] latm => 1
     list ::= ordered_list 
     list ::= bullet_list 
     
-    ordered_list        ::= ordered_list_items [\n] [\n]
-    ordered_list        ::= ordered_list_items
+    ordered_list        ::= ordered_list_items_period [\n] [\n]
+    ordered_list        ::= ordered_list_items_period
+    ordered_list        ::= ordered_list_items_bracket [\n] [\n]
+    ordered_list        ::= ordered_list_items_bracket
     
-    ordered_list_items  ::= ordered_list_item+
-    ordered_list_item   ::= ordered_list_marker list_marker_spaces line
+    ordered_list_items_period  ::= ordered_list_item_period+
+    ordered_list_item_period   ::= ordered_list_marker_period (list_marker_spaces) line
 
-    ordered_list_marker ~ digits '.'
-    ordered_list_marker ~ digits ')'
+    ordered_list_items_bracket ::= ordered_list_item_bracket+
+    ordered_list_item_bracket  ::= ordered_list_marker_bracket (list_marker_spaces) line
 
-    digits ~ [\d]+
+    ordered_list_marker_period  ~ digits '.'
+    ordered_list_marker_bracket ~ digits ')'
+
+    digits ~ [0-9]+
 
     bullet_list        ::= bullet_list_items [\n] [\n] rank => 1
     bullet_list        ::= bullet_list_items
     
-    bullet_list_items  ::= bullet_list_item+
-    bullet_list_item   ::= bullet_list_marker list_marker_spaces line
+    bullet_list_items  ::= bullet_list_items_hyphen
+    bullet_list_items  ::= bullet_list_items_plus
+    bullet_list_items  ::= bullet_list_items_star
 
-    bullet_list_marker ~ '-' | '+' | '*'
+    bullet_list_items_hyphen ::= bullet_list_item_hyphen+
+    bullet_list_item_hyphen  ::= (bullet_list_marker_hyphen) (list_marker_spaces) line
+    bullet_list_marker_hyphen ~ '-'
+
+    bullet_list_items_plus ::= bullet_list_item_plus+
+    bullet_list_item_plus  ::= (bullet_list_marker_plus) (list_marker_spaces) line
+    bullet_list_marker_plus  ~ '+'
+
+    bullet_list_items_star ::= bullet_list_item_star+
+    bullet_list_item_star  ::= (bullet_list_marker_star) (list_marker_spaces) line
+    bullet_list_marker_star ~ '*'
 
     list_marker_spaces ~ ' ' | '  ' | '   ' | '    '    
-
+    
     # 6 Inlines
     inline ::= 'to be written'
+
+    line  ::= non_nl [\n]
+
+    non_nl ::= [^\n]+
 
     # 6.1 Backslash escapes
     # 6.2 Entities
@@ -144,7 +190,7 @@ sub parse {
     # 2.1 Preprocessing
     $input = preprocess $input;
     
-    warn "parse input: '$input'";
+#    warn "parse input: '$input'";
     
     # get grammar, create recognizer and read input
     my $g = $self->{grammar};
@@ -178,7 +224,7 @@ sub parse {
 
         # until the above is done,
         # just count alternatives and warn
-        warn "Ambiguous parse: $#asts alternatives.";
+        warn "Ambiguous parse: ", $#asts + 1, " alternatives.";
         for my $i (0..$#asts){
             say "# Alternative ", $i+1, ":\n", Dump $asts[$i];
         }
@@ -190,11 +236,11 @@ sub parse {
 sub html{
     my ( $self, $ast ) = @_;
 
-    warn "# html", Dump $ast;
+#    warn "# html", Dump $ast;
 
     my $html = to_html( $ast );
 
-    say $html;
+#    say $html;
 
     return $html;
 }
@@ -234,29 +280,60 @@ sub to_html{
         elsif ($id eq 'indented_code_block_spaces'){ # remove first 4 spaces
             return substr $ast->[1], 4;
         }
+        # 4.8 Paragraphs
+        elsif ($id eq 'paragraphs'){
+            return join ( "\n", map { to_html( $_ ) } @children );
+        }
+        elsif ($id eq 'paragraph'){
+            my $text = join ( "\n", map { to_html( $_ ) } @children );
+            chomp $text;
+            return "<p>" . $text . "</p>\n";
+        }
+        elsif ($id eq 'paragraph_lines'){
+            return join("", map { to_html( $_ ) } @children);
+        }
+        elsif ($id eq 'paragraph_line'){
+#            warn "to_html:\n$id\n", Dump \@children;
+            return join('', map { to_html( $_ ) } @children );
+#            return to_html( $children[0] );
+        }
         # 5.3 Lists        
         elsif ($id eq 'list'){
             return join ( "", map { to_html( $_ ) } @children )
         }
         elsif ($id eq 'ordered_list'){
-            return "<ol>\n" . join ( "", map { to_html( $_ ) } @children ) . "</ol>"
+            # get start marker and set list start as needed
+#            warn "to_html:\n$id\n", Dump \@children;
+#            warn "start marker:", Dump $children[0]->[1]->[1]->[1];
+            my $start_marker = substr $children[0]->[1]->[1]->[1], 0, -1;
+            return "<ol" . ($start_marker > 1 ? qq{ start="$start_marker"} : '') . ">\n" 
+                . join ( "", map { to_html( $_ ) } @children ) 
+                . "</ol>\n"
         }
-        elsif ($id eq 'ordered_list_items'){
+        elsif ($id eq 'bullet_list'){
+            return "<ul>\n" . join ( "", map { to_html( $_ ) } @children ) . "</ul>\n"
+        }
+        elsif ($id =~ /^ordered_list_items/
+            or $id =~ /^bullet_list_items/){
             return join ( "", map { to_html( $_ ) } @children )
         }
-        elsif ($id eq 'ordered_list_item'){
+        elsif ($id =~ /^ordered_list_item/
+            or $id =~ /^bullet_list_item/){
             my $text = join ( "", map { to_html( $_ ) } @children );
             chomp $text;
             return "<li>" . $text . "</li>\n";
         }
-        elsif ($id eq 'ordered_list_marker'){
+        elsif ($id =~ /^ordered_list_marker/){
+            return '';
+        }
+        elsif ($id =~ /^bullet_list_marker/){
             return join ( "", map { to_html( $_ ) } @children )
         }
         elsif ($id eq 'list_marker_spaces'){
             return join ( "", map { to_html( $_ ) } @children )
         }
         elsif ($id eq 'non_nl'){
-            return join '', splice @$ast, 1;
+            return join("", map { to_html( $_ ) } @children);
         }
         elsif ($id eq 'blank_lines'){
             return "\n";
@@ -268,11 +345,6 @@ sub to_html{
 #            warn "to_html:\n$id\n", Dump \@children;
             return join('', map { to_html( $_ ) } @children );
 #            return to_html( $children[0] );
-        }
-        elsif ($id eq 'paragraph'){
-            my $text = join ( "\n", map { to_html( $_ ) } @children );
-            chomp $text;
-            return "<p>" . $text . "</p>\n";
         }
         else {
             warn "unknown", Dump $ast;
