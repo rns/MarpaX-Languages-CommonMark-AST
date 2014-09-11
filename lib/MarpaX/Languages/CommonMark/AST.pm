@@ -44,8 +44,8 @@ lexeme default = action => [ name, value ] latm => 1
     hr_indentation ~ ' ' | '  ' | '   '
     hr_chars       ~ stars | hyphens | underscores
 
-    stars     ~ star_item star_item star_item
-    stars     ~ star_item star_item star_item star_item_seq
+    stars ~ star_item star_item star_item
+    stars ~ star_item star_item star_item star_item_seq
     star_item_seq ~ star_item+
     star_item ~ star_seq zero_or_more_spaces
     star_item ~ star_seq
@@ -53,18 +53,17 @@ lexeme default = action => [ name, value ] latm => 1
     star_seq  ~ star star
     star ~ '*'
 
-    hyphens     ~ hyphen_item hyphen_item hyphen_item
-    hyphens     ~ hyphen_item hyphen_item hyphen_item hyphen_item_seq
+    hyphens ~ hyphen_item hyphen_item hyphen_item
+    hyphens ~ hyphen_item hyphen_item hyphen_item hyphen_item_seq
     hyphen_item_seq ~ hyphen_item+
     hyphen_item ~ hyphen_seq zero_or_more_spaces
     hyphen_item ~ hyphen_seq
     hyphen_seq  ~ hyphen
     hyphen_seq  ~ hyphen hyphen
-    hyphen ~ '*'
     hyphen ~ '-'
 
-    underscores     ~ underscore_item underscore_item underscore_item
-    underscores     ~ underscore_item underscore_item underscore_item underscore_item_seq
+    underscores ~ underscore_item underscore_item underscore_item
+    underscores ~ underscore_item underscore_item underscore_item underscore_item_seq
     underscore_item_seq ~ underscore_item+
     underscore_item ~ underscore_seq zero_or_more_spaces
     underscore_item ~ underscore_seq
@@ -115,6 +114,7 @@ lexeme default = action => [ name, value ] latm => 1
     
     # sequences of non-blank lines that cannot be interpreted as 
     # other kinds of blocks 
+    paragraph_line  ::= inline
     
     # not a list
     paragraph_line  ::= list_marker [^ ] line # can start from a list marker
@@ -130,15 +130,15 @@ lexeme default = action => [ name, value ] latm => 1
     # not a horizontal rule
     paragraph_line  ::= hr_marker line   # can start from horizontal line marker
                                          # only if followed by a non-newline
-    
+
     # 4.9 Blank lines
     
     # 5 Container blocks
     container_block ::= list
 
     # 5.1 Block quotes
+
     # 5.2 List items
-    
     # 5.3 Lists
     list ::= ordered_list 
     list ::= bullet_list 
@@ -150,9 +150,11 @@ lexeme default = action => [ name, value ] latm => 1
     
     ordered_list_items_period  ::= ordered_list_item_period+
     ordered_list_item_period   ::= ordered_list_marker_period (list_marker_spaces) line
+    ordered_list_item_period   ::= ordered_list_marker_period (list_marker_spaces) horizontal_rule
 
     ordered_list_items_bracket ::= ordered_list_item_bracket+
     ordered_list_item_bracket  ::= ordered_list_marker_bracket (list_marker_spaces) line
+    ordered_list_item_bracket  ::= ordered_list_marker_bracket (list_marker_spaces) horizontal_rule
 
     ordered_list_marker_period  ~ digits '.'
     ordered_list_marker_bracket ~ digits ')'
@@ -168,20 +170,23 @@ lexeme default = action => [ name, value ] latm => 1
 
     bullet_list_items_hyphen ::= bullet_list_item_hyphen+
     bullet_list_item_hyphen  ::= (bullet_list_marker_hyphen) (list_marker_spaces) line
+    bullet_list_item_hyphen  ::= (bullet_list_marker_hyphen) (list_marker_spaces) horizontal_rule
     bullet_list_marker_hyphen ~ '-'
 
     bullet_list_items_plus ::= bullet_list_item_plus+
     bullet_list_item_plus  ::= (bullet_list_marker_plus) (list_marker_spaces) line
+    bullet_list_item_plus  ::= (bullet_list_marker_plus) (list_marker_spaces) horizontal_rule
     bullet_list_marker_plus  ~ '+'
 
     bullet_list_items_star ::= bullet_list_item_star+
     bullet_list_item_star  ::= (bullet_list_marker_star) (list_marker_spaces) line
+    bullet_list_item_star  ::= (bullet_list_marker_star) (list_marker_spaces) horizontal_rule
     bullet_list_marker_star ~ '*'
 
     list_marker_spaces ~ ' ' | '  ' | '   ' | '    '    
     
     # 6 Inlines
-    inline ::= 'to be written'
+    inline ::= emphasis
 
     line  ~ non_nl [\n]
 
@@ -190,7 +195,11 @@ lexeme default = action => [ name, value ] latm => 1
     # 6.1 Backslash escapes
     # 6.2 Entities
     # 6.3 Code span
+    
     # 6.4 Emphasis and strong emphasis
+    emphasis ::= ('*') emphasized ('*')
+    emphasized ~ [^*]+
+    
     # 6.5 Links
     # 6.6 Images
     # 6.7 Autolinks
@@ -284,13 +293,12 @@ sub to_html{
         elsif ($id eq 'block' 
             or $id eq 'leaf_block'
             or $id eq 'container_block'
-            or $id eq 'inline'
             ){
             return join '', map { to_html( $_ ) } @children;
         }
         # 4.1 Horizontal rules
         elsif ($id eq 'horizontal_rule'){
-            "<hr />\n";
+            return "<hr />\n";
         }
         # when <hr_marker> occurs as part of a paragraph line
         elsif ($id eq 'hr_marker'){
@@ -324,17 +332,17 @@ sub to_html{
             return join ( "\n", map { to_html( $_ ) } @children );
         }
         elsif ($id eq 'paragraph'){
+            warn "to_html:\n$id\n", Dump \@children;
             my $text = join ( "\n", map { to_html( $_ ) } @children );
-            chomp $text;
+            $text =~ s/\n+$//;
+            warn "to_html:\n$id: '$text'";
             return "<p>" . $text . "</p>\n";
         }
         elsif ($id eq 'paragraph_lines'){
             return join("", map { to_html( $_ ) } @children);
         }
         elsif ($id eq 'paragraph_line'){
-#            warn "to_html:\n$id\n", Dump \@children;
             return join('', map { to_html( $_ ) } @children );
-#            return to_html( $children[0] );
         }
         # 5.3 Lists        
         elsif ($id eq 'list'){
@@ -350,6 +358,7 @@ sub to_html{
                 . "</ol>\n"
         }
         elsif ($id eq 'bullet_list'){
+#            warn "to_html:\n$id\n", Dump \@children;
             return "<ul>\n" . join ( "", map { to_html( $_ ) } @children ) . "</ul>\n"
         }
         elsif ($id =~ /^ordered_list_items/
@@ -358,6 +367,7 @@ sub to_html{
         }
         elsif ($id =~ /^ordered_list_item/
             or $id =~ /^bullet_list_item/){
+#            warn "to_html:\n$id\n", Dump \@children;
             my $text = join ( "", map { to_html( $_ ) } @children );
             chomp $text;
             return "<li>" . $text . "</li>\n";
@@ -377,6 +387,16 @@ sub to_html{
         elsif ($id eq 'blank_lines'){
             return "\n";
         }
+        # 6 Inlines
+        elsif ($id eq 'inline'){
+            return join("", map { to_html( $_ ) } @children);
+        }
+        # 6.4 Emphasis and strong emphasis
+        elsif ($id eq 'emphasis'){
+            warn "to_html:\n$id\n", Dump \@children;
+            return "<em>" . $children[0]->[1] . "</em>";
+        }
+        
         elsif ($id eq 'lines'){
             return join("", map { to_html( $_ ) } @children);
         }

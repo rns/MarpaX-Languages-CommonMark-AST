@@ -92,13 +92,13 @@ _____________________________________
 --- expected
 <hr />
 
-=== Spaces are allowed at the end:
+=== Spaces are allowed at the end.
 --- input filter
 - - - -    
 --- expected
 <hr />
 
-=== However, no other characters may occur at the end or the beginning:
+=== However, no other characters may occur at the end or the beginning.
 --- input filter
 _ _ _ _ a
 
@@ -146,7 +146,7 @@ bar
 <h2>Foo</h2>
 <p>bar</p>
 
-=== the horizontal rule is preferred:
+=== the horizontal rule is preferred
 When both a horizontal rule and a list item are possible interpretations of a line
 --- input filter
 * Foo
