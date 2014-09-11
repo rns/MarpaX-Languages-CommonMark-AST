@@ -42,15 +42,15 @@ lexeme default = action => [ name, value ] latm => 1
     hr_marker ~ hr_chars
     
     hr_indentation ~ ' ' | '  ' | '   '
-    hr_chars       ~ stars | hyphens | underscores
+    hr_chars ~ stars | hyphens | underscores
 
     stars ~ star_item star_item star_item
     stars ~ star_item star_item star_item star_item_seq
     star_item_seq ~ star_item+
     star_item ~ star_seq zero_or_more_spaces
     star_item ~ star_seq
-    star_seq  ~ star
-    star_seq  ~ star star
+    star_seq ~ star
+    star_seq ~ star star
     star ~ '*'
 
     hyphens ~ hyphen_item hyphen_item hyphen_item
@@ -58,8 +58,8 @@ lexeme default = action => [ name, value ] latm => 1
     hyphen_item_seq ~ hyphen_item+
     hyphen_item ~ hyphen_seq zero_or_more_spaces
     hyphen_item ~ hyphen_seq
-    hyphen_seq  ~ hyphen
-    hyphen_seq  ~ hyphen hyphen
+    hyphen_seq ~ hyphen
+    hyphen_seq ~ hyphen hyphen
     hyphen ~ '-'
 
     underscores ~ underscore_item underscore_item underscore_item
@@ -88,10 +88,10 @@ lexeme default = action => [ name, value ] latm => 1
     # 4.4 Indented code blocks
     indented_code_block ::= indented_chunks
 
-    indented_chunks     ::= indented_chunk blank_lines
-    indented_chunks     ::= indented_chunk
+    indented_chunks ::= indented_chunk blank_lines
+    indented_chunks ::= indented_chunk
     
-    indented_chunk      ::= indented_chunk_line+
+    indented_chunk ::= indented_chunk_line+
     indented_chunk_line ::= indented_code_block_spaces line
 
     indented_code_block_spaces ~ '    ' zero_or_more_spaces
@@ -102,8 +102,8 @@ lexeme default = action => [ name, value ] latm => 1
 
     # 4.8 Paragraphs
     paragraphs ::= paragraph+
-    paragraph  ::= paragraph_lines blank_lines
-    paragraph  ::= paragraph_line indented_chunk_line  # Example 10, Example 58
+    paragraph ::= paragraph_lines blank_lines
+    paragraph ::= paragraph_line indented_chunk_line  # Example 10, Example 58
 
     paragraph_lines ::= paragraph_line+
 
@@ -114,12 +114,12 @@ lexeme default = action => [ name, value ] latm => 1
     
     # sequences of non-blank lines that cannot be interpreted as 
     # other kinds of blocks 
-    paragraph_line  ::= inline
+    paragraph_line ::= inline
     
     # not a list
-    paragraph_line  ::= list_marker [^ ] line # can start from a list marker
+    paragraph_line ::= list_marker [^ ] line # can start from a list marker
                                               # only if followed by a non-space
-    paragraph_line  ::= list_marker [\n]      # or a newline
+    paragraph_line ::= list_marker [\n]      # or a newline
 
     list_marker ::= bullet_list_marker_hyphen
     list_marker ::= bullet_list_marker_plus
@@ -128,7 +128,7 @@ lexeme default = action => [ name, value ] latm => 1
     list_marker ::= ordered_list_marker_bracket
 
     # not a horizontal rule
-    paragraph_line  ::= hr_marker line   # can start from horizontal line marker
+    paragraph_line ::= hr_marker line   # can start from horizontal line marker
                                          # only if followed by a non-newline
 
     # 4.9 Blank lines
@@ -143,44 +143,44 @@ lexeme default = action => [ name, value ] latm => 1
     list ::= ordered_list 
     list ::= bullet_list 
     
-    ordered_list        ::= ordered_list_items_period [\n] [\n]
-    ordered_list        ::= ordered_list_items_period
-    ordered_list        ::= ordered_list_items_bracket [\n] [\n]
-    ordered_list        ::= ordered_list_items_bracket
+    ordered_list ::= ordered_list_items_period [\n] [\n]
+    ordered_list ::= ordered_list_items_period
+    ordered_list ::= ordered_list_items_bracket [\n] [\n]
+    ordered_list ::= ordered_list_items_bracket
     
-    ordered_list_items_period  ::= ordered_list_item_period+
-    ordered_list_item_period   ::= ordered_list_marker_period (list_marker_spaces) line
-    ordered_list_item_period   ::= ordered_list_marker_period (list_marker_spaces) horizontal_rule
+    ordered_list_items_period ::= ordered_list_item_period+
+    ordered_list_item_period ::= ordered_list_marker_period (list_marker_spaces) line
+    ordered_list_item_period ::= ordered_list_marker_period (list_marker_spaces) horizontal_rule
 
     ordered_list_items_bracket ::= ordered_list_item_bracket+
-    ordered_list_item_bracket  ::= ordered_list_marker_bracket (list_marker_spaces) line
-    ordered_list_item_bracket  ::= ordered_list_marker_bracket (list_marker_spaces) horizontal_rule
+    ordered_list_item_bracket ::= ordered_list_marker_bracket (list_marker_spaces) line
+    ordered_list_item_bracket ::= ordered_list_marker_bracket (list_marker_spaces) horizontal_rule
 
-    ordered_list_marker_period  ~ digits '.'
+    ordered_list_marker_period ~ digits '.'
     ordered_list_marker_bracket ~ digits ')'
 
     digits ~ [0-9]+
 
-    bullet_list        ::= bullet_list_items [\n] [\n] rank => 1
-    bullet_list        ::= bullet_list_items
+    bullet_list ::= bullet_list_items [\n] [\n] rank => 1
+    bullet_list ::= bullet_list_items
     
-    bullet_list_items  ::= bullet_list_items_hyphen
-    bullet_list_items  ::= bullet_list_items_plus
-    bullet_list_items  ::= bullet_list_items_star
+    bullet_list_items ::= bullet_list_items_hyphen
+    bullet_list_items ::= bullet_list_items_plus
+    bullet_list_items ::= bullet_list_items_star
 
     bullet_list_items_hyphen ::= bullet_list_item_hyphen+
-    bullet_list_item_hyphen  ::= (bullet_list_marker_hyphen) (list_marker_spaces) line
-    bullet_list_item_hyphen  ::= (bullet_list_marker_hyphen) (list_marker_spaces) horizontal_rule
+    bullet_list_item_hyphen ::= (bullet_list_marker_hyphen) (list_marker_spaces) line
+    bullet_list_item_hyphen ::= (bullet_list_marker_hyphen) (list_marker_spaces) horizontal_rule
     bullet_list_marker_hyphen ~ '-'
 
     bullet_list_items_plus ::= bullet_list_item_plus+
-    bullet_list_item_plus  ::= (bullet_list_marker_plus) (list_marker_spaces) line
-    bullet_list_item_plus  ::= (bullet_list_marker_plus) (list_marker_spaces) horizontal_rule
+    bullet_list_item_plus ::= (bullet_list_marker_plus) (list_marker_spaces) line
+    bullet_list_item_plus ::= (bullet_list_marker_plus) (list_marker_spaces) horizontal_rule
     bullet_list_marker_plus  ~ '+'
 
     bullet_list_items_star ::= bullet_list_item_star+
-    bullet_list_item_star  ::= (bullet_list_marker_star) (list_marker_spaces) line
-    bullet_list_item_star  ::= (bullet_list_marker_star) (list_marker_spaces) horizontal_rule
+    bullet_list_item_star ::= (bullet_list_marker_star) (list_marker_spaces) line
+    bullet_list_item_star ::= (bullet_list_marker_star) (list_marker_spaces) horizontal_rule
     bullet_list_marker_star ~ '*'
 
     list_marker_spaces ~ ' ' | '  ' | '   ' | '    '    
@@ -188,10 +188,10 @@ lexeme default = action => [ name, value ] latm => 1
     # 6 Inlines
     inline ::= emphasis
 
-    line       ~ line_items [\n]
+    line ~ line_items [\n]
     line_items ~ line_item+
-    line_item  ~ non_nl
-    non_nl     ~ [^\n]+
+    line_item ~ non_nl
+    non_nl ~ [^\n]+
 
     # 6.1 Backslash escapes
     # 6.2 Entities
