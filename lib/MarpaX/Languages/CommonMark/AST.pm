@@ -29,31 +29,60 @@ lexeme default = action => [ name, value ] latm => 1
     
     # 4 Leaf blocks
     leaf_block ::= horizontal_rule
-    leaf_block ::= paragraphs
+    leaf_block ::= ATX_header
+    # ...
     leaf_block ::= indented_code_block
+    # ...
+    leaf_block ::= paragraphs
     
     # 4.1 Horizontal rules
     horizontal_rule ::= hr_marker [\n]
     
-    hr_marker ::= hr_indentation hr_chars
-    hr_marker ::= hr_chars
+    hr_marker ~ hr_indentation hr_chars
+    hr_marker ~ hr_chars
     
-    hr_indentation ::= ' ' | '  ' | '   '
-    hr_chars       ::= stars | hyphens | underscores
+    hr_indentation ~ ' ' | '  ' | '   '
+    hr_chars       ~ stars | hyphens | underscores
 
-    stars    ::= star star star_seq
-    star_seq ::= star+
-    star     ~ '*'
+    stars     ~ star_item star_item star_item
+    stars     ~ star_item star_item star_item star_item_seq
+    star_item_seq ~ star_item+
+    star_item ~ star_seq zero_or_more_spaces
+    star_item ~ star_seq
+    star_seq  ~ star
+    star_seq  ~ star star
+    star ~ '*'
 
-    hyphens    ::= hyphen hyphen hyphen_seq
-    hyphen_seq ::= hyphen+
-    hyphen     ~ '-'
+    hyphens     ~ hyphen_item hyphen_item hyphen_item
+    hyphens     ~ hyphen_item hyphen_item hyphen_item hyphen_item_seq
+    hyphen_item_seq ~ hyphen_item+
+    hyphen_item ~ hyphen_seq zero_or_more_spaces
+    hyphen_item ~ hyphen_seq
+    hyphen_seq  ~ hyphen
+    hyphen_seq  ~ hyphen hyphen
+    hyphen ~ '*'
+    hyphen ~ '-'
 
-    underscores    ::= underscore underscore underscore_seq
-    underscore_seq ::= underscore+
+    underscores     ~ underscore_item underscore_item underscore_item
+    underscores     ~ underscore_item underscore_item underscore_item underscore_item_seq
+    underscore_item_seq ~ underscore_item+
+    underscore_item ~ underscore_seq zero_or_more_spaces
+    underscore_item ~ underscore_seq
+    underscore_seq  ~ underscore
+    underscore_seq  ~ underscore underscore
     underscore ~ '_'
 
+    zero_or_more_spaces ~ [ ]*
+    
     # 4.2 ATX headers
+    ATX_header ::= ATX_header_marker ([ ]) line
+    
+    ATX_header_marker ~ '#'
+    ATX_header_marker ~ '##'
+    ATX_header_marker ~ '###'
+    ATX_header_marker ~ '####'
+    ATX_header_marker ~ '#####'
+    ATX_header_marker ~ '######'
     
     # 4.3 Setext headers
 
@@ -66,8 +95,7 @@ lexeme default = action => [ name, value ] latm => 1
     indented_chunk      ::= indented_chunk_line+
     indented_chunk_line ::= indented_code_block_spaces line
 
-    indented_code_block_spaces ~ '    ' space_seq
-    space_seq                  ~ [ ]*
+    indented_code_block_spaces ~ '    ' zero_or_more_spaces
 
     # 4.5 Fenced code blocks
     # 4.6 HTML blocks
@@ -155,9 +183,9 @@ lexeme default = action => [ name, value ] latm => 1
     # 6 Inlines
     inline ::= 'to be written'
 
-    line  ::= non_nl [\n]
+    line  ~ non_nl [\n]
 
-    non_nl ::= [^\n]+
+    non_nl ~ [^\n]+
 
     # 6.1 Backslash escapes
     # 6.2 Entities
@@ -263,6 +291,17 @@ sub to_html{
         # 4.1 Horizontal rules
         elsif ($id eq 'horizontal_rule'){
             "<hr />\n";
+        }
+        # when <hr_marker> occurs as part of a paragraph line
+        elsif ($id eq 'hr_marker'){
+            return join ( '', map { to_html( $_ ) } @children );
+        }
+        # 4.2 ATX headers
+        elsif ($id eq 'ATX_header'){
+            my $level = length $children[0]->[1];
+            my $text = $children[1]->[1];
+            chomp $text;
+            return "<h$level>$text</h$level>\n";
         }
         # 4.4 Indented code blocks
         elsif ($id eq 'indented_code_block'){
