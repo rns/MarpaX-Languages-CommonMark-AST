@@ -25,7 +25,6 @@ lexeme default = action => [ name, value ] latm => 1
     # 3.2 Container blocks and leaf blocks
     block ::= leaf_block
     block ::= container_block
-    block ::= inline
     
     # 4 Leaf blocks
     leaf_block ::= horizontal_rule
@@ -101,6 +100,8 @@ lexeme default = action => [ name, value ] latm => 1
     # 4.7 Link reference definitions
 
     # 4.8 Paragraphs
+    # sequences of non-blank lines that cannot be interpreted as 
+    # other kinds of blocks 
     paragraphs ::= paragraph+
     paragraph ::= paragraph_lines blank_lines
     paragraph ::= paragraph_line indented_chunk_line  # Example 10, Example 58
@@ -109,16 +110,15 @@ lexeme default = action => [ name, value ] latm => 1
 
     blank_lines ~ [\n]*
 
-    # the blow line is here just to make more tests pass
-#    paragraph_line  ::= line # can start from anything but newline
-    
-    # sequences of non-blank lines that cannot be interpreted as 
-    # other kinds of blocks 
-    paragraph_line ::= inline
+    # paragraph lines can contain some inlines appearing as
+    # paragraph_line_items below
+    paragraph_line ::= paragraph_line_items
+    paragraph_line_items ::= paragraph_line_item+
+    paragraph_line_item ::= emphasis
     
     # not a list
     paragraph_line ::= list_marker [^ ] line # can start from a list marker
-                                              # only if followed by a non-space
+                                             # only if followed by a non-space
     paragraph_line ::= list_marker [\n]      # or a newline
 
     list_marker ::= bullet_list_marker_hyphen
@@ -186,11 +186,10 @@ lexeme default = action => [ name, value ] latm => 1
     list_marker_spaces ~ ' ' | '  ' | '   ' | '    '    
     
     # 6 Inlines
-    inline ::= emphasis
+#    inline ::= 'no block can contain any inline, so this is not needed yet'
 
-    line ~ line_items [\n]
-    line_items ~ line_item+
-    line_item ~ non_nl
+    # just a line of any symbols up to an including a newline
+    line ::= non_nl [\n]
     non_nl ~ [^\n]+
 
     # 6.1 Backslash escapes
@@ -198,7 +197,8 @@ lexeme default = action => [ name, value ] latm => 1
     # 6.3 Code span
     
     # 6.4 Emphasis and strong emphasis
-    emphasis ::= ('*') emphasized ('*')
+    emphasis ::= (emphasis_star) emphasized (emphasis_star)
+    emphasis_star ~ '*'
     emphasized ~ [^*]+
     
     # 6.5 Links
@@ -283,6 +283,11 @@ sub html{
     return $html;
 }
 
+sub dump_node { 
+    my ($id, @children) = @_;
+    return "# <$id> " . ( @children ? Dump \@children : "\n" ); 
+}
+
 sub to_html{
     my $ast = shift;
     if (ref $ast){
@@ -307,8 +312,9 @@ sub to_html{
         }
         # 4.2 ATX headers
         elsif ($id eq 'ATX_header'){
+#           warn dump_node $id, @children;
             my $level = length $children[0]->[1];
-            my $text = $children[1]->[1];
+            my $text = $children[1]->[1]->[1];
             chomp $text;
             return "<h$level>$text</h$level>\n";
         }
@@ -333,10 +339,10 @@ sub to_html{
             return join ( "\n", map { to_html( $_ ) } @children );
         }
         elsif ($id eq 'paragraph'){
-            warn "to_html:\n$id\n", Dump \@children;
+            warn dump_node $id, @children;
             my $text = join ( "\n", map { to_html( $_ ) } @children );
             $text =~ s/\n+$//;
-            warn "to_html:\n$id: '$text'";
+            warn "# $id\'s text:\n'$text'";
             return "<p>" . $text . "</p>\n";
         }
         elsif ($id eq 'paragraph_lines'){
@@ -345,21 +351,25 @@ sub to_html{
         elsif ($id eq 'paragraph_line'){
             return join('', map { to_html( $_ ) } @children );
         }
+        elsif ($id eq 'paragraph_line_items'){
+            return join('', map { to_html( $_ ) } @children );
+        }
+        elsif ($id eq 'paragraph_line_item'){
+            return join('', map { to_html( $_ ) } @children );
+        }
         # 5.3 Lists        
         elsif ($id eq 'list'){
             return join ( "", map { to_html( $_ ) } @children )
         }
         elsif ($id eq 'ordered_list'){
             # get start marker and set list start as needed
-#            warn "to_html:\n$id\n", Dump \@children;
-#            warn "start marker:", Dump $children[0]->[1]->[1]->[1];
+#           warn "start marker:", Dump $children[0]->[1]->[1]->[1];
             my $start_marker = substr $children[0]->[1]->[1]->[1], 0, -1;
             return "<ol" . ($start_marker > 1 ? qq{ start="$start_marker"} : '') . ">\n" 
                 . join ( "", map { to_html( $_ ) } @children ) 
                 . "</ol>\n"
         }
         elsif ($id eq 'bullet_list'){
-#            warn "to_html:\n$id\n", Dump \@children;
             return "<ul>\n" . join ( "", map { to_html( $_ ) } @children ) . "</ul>\n"
         }
         elsif ($id =~ /^ordered_list_items/
@@ -368,7 +378,6 @@ sub to_html{
         }
         elsif ($id =~ /^ordered_list_item/
             or $id =~ /^bullet_list_item/){
-#            warn "to_html:\n$id\n", Dump \@children;
             my $text = join ( "", map { to_html( $_ ) } @children );
             chomp $text;
             return "<li>" . $text . "</li>\n";
@@ -394,7 +403,6 @@ sub to_html{
         }
         # 6.4 Emphasis and strong emphasis
         elsif ($id eq 'emphasis'){
-            warn "to_html:\n$id\n", Dump \@children;
             return "<em>" . $children[0]->[1] . "</em>";
         }
         
@@ -402,12 +410,10 @@ sub to_html{
             return join("", map { to_html( $_ ) } @children);
         }
         elsif ($id eq 'line'){
-#            warn "to_html:\n$id\n", Dump \@children;
             return join('', map { to_html( $_ ) } @children );
-#            return to_html( $children[0] );
         }
         else {
-            warn "unknown", Dump $ast;
+            warn "# Unknown node!\n", dump_node $id, @children;
         }
     }
     else{ # scalar means literal
