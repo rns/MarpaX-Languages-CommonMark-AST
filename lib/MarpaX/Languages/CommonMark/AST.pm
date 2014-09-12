@@ -29,10 +29,11 @@ lexeme default = action => [ name, value ] latm => 1
     # 4 Leaf blocks
     leaf_block ::= horizontal_rule
     leaf_block ::= ATX_header
-    # ...
+    leaf_block ::= setext_header
     leaf_block ::= indented_code_block
+    leaf_block ::= fenced_code_block
     # ...
-    leaf_block ::= paragraphs
+    leaf_block ::= paragraph
     
     # 4.1 Horizontal rules
     horizontal_rule ::= hr_marker [\n]
@@ -83,7 +84,12 @@ lexeme default = action => [ name, value ] latm => 1
     ATX_header_marker ~ '######'
     
     # 4.3 Setext headers
-
+    setext_header ::= non_nl ([\n]) setext_header_underline
+    setext_header_underline ::= setext_header_hyphens
+    setext_header_underline ::= setext_header_equals_sign
+    setext_header_hyphens ~ [\-]+
+    setext_header_equals_sign ~ [=]+
+    
     # 4.4 Indented code blocks
     indented_code_block ::= indented_chunks
 
@@ -96,24 +102,38 @@ lexeme default = action => [ name, value ] latm => 1
     indented_code_block_spaces ~ '    ' zero_or_more_spaces
 
     # 4.5 Fenced code blocks
+    fenced_code_block ::= code_fence_backticks fenced_code_block_content code_fence_backticks
+    fenced_code_block ::= code_fence_tildes fenced_code_block_content code_fence_tildes
+    fenced_code_block_content ::= line+
+    code_fence_backticks ~ '`' | '``' | '```'
+    code_fence_tildes ~ '~' | '~~' | '~~~'
+    
     # 4.6 HTML blocks
     # 4.7 Link reference definitions
 
     # 4.8 Paragraphs
-    # sequences of non-blank lines that cannot be interpreted as 
-    # other kinds of blocks 
-    paragraphs ::= paragraph+
+
     paragraph ::= paragraph_lines blank_lines
-    paragraph ::= paragraph_line indented_chunk_line  # Example 10, Example 58
-
     paragraph_lines ::= paragraph_line+
-
-    blank_lines ~ [\n]*
-
-    # paragraph lines can contain some inlines appearing as
-    # paragraph_line_items below
     paragraph_line ::= paragraph_line_items
     paragraph_line_items ::= paragraph_line_item+
+    
+    # special cases
+    paragraph ::= paragraph_line indented_chunk_line  # Example 10, Example 58
+    
+    # A sequence of non-blank lines that cannot be interpreted 
+    # as other kinds of blocks forms a paragraph.
+    # not a horizontal rule
+    paragraph_line_item ::= hr_marker line # can start from horizontal line marker
+                                           # only if followed by a non-newline
+    # not an ATX_header
+    
+    # not an setext_header
+    # not an indented_code_block
+    # not a fenced_code_block
+    
+    # The contents of the paragraph are the result of parsing 
+    # the paragraph’s raw content as inlines
     paragraph_line_item ::= emphasis
     
     # not a list
@@ -127,12 +147,9 @@ lexeme default = action => [ name, value ] latm => 1
     list_marker ::= ordered_list_marker_period
     list_marker ::= ordered_list_marker_bracket
 
-    # not a horizontal rule
-    paragraph_line ::= hr_marker line   # can start from horizontal line marker
-                                         # only if followed by a non-newline
-
     # 4.9 Blank lines
-    
+    blank_lines ~ [\n]*
+
     # 5 Container blocks
     container_block ::= list
 
@@ -188,10 +205,6 @@ lexeme default = action => [ name, value ] latm => 1
     # 6 Inlines
 #    inline ::= 'no block can contain any inline, so this is not needed yet'
 
-    # just a line of any symbols up to an including a newline
-    line ::= non_nl [\n]
-    non_nl ~ [^\n]+
-
     # 6.1 Backslash escapes
     # 6.2 Entities
     # 6.3 Code span
@@ -209,11 +222,16 @@ lexeme default = action => [ name, value ] latm => 1
     # 6.10 Soft line breaks
     # 6.11 Strings
 
+    # line of non-newlines up to an including newline
+    line ::= non_nl [\n]
+    non_nl ~ [^\n]+
+
 END_OF_SOURCE
     } );
 
     return $self;
 }
+
 
 sub preprocess{
     my $input = shift;
@@ -228,14 +246,14 @@ sub parse {
     # 2.1 Preprocessing
     $input = preprocess $input;
     
-#    warn "parse input: '$input'";
+    warn "parse input: '$input'";
     
     # get grammar, create recognizer and read input
     my $g = $self->{grammar};
 
     my $r = Marpa::R2::Scanless::R->new( { 
         grammar => $g,
-        trace_terminals => 1,
+#        trace_terminals => 99,
     } );
     eval {$r->read(\$input)} || warn "Parse failure, progress report is:\n" . $r->show_progress;
 
@@ -318,6 +336,23 @@ sub to_html{
             chomp $text;
             return "<h$level>$text</h$level>\n";
         }
+        # 4.3 Setext headers
+        elsif ($id eq 'setext_header'){
+#            warn dump_node $id, @children;
+            my $text = $children[0]->[1];
+            my $underline = $children[1]->[1]->[0];
+            my $level;
+            if ($underline eq 'setext_header_hyphens'){
+                $level = 2;
+            }
+            elsif ($underline eq 'setext_header_equals_sign'){
+                $level = 1;
+            }
+            return "<h$level>$text</h$level>";
+        }
+        elsif ($id eq 'setext_header_underline'){
+            return join ( '', map { to_html( $_ ) } @children );
+        }
         # 4.4 Indented code blocks
         elsif ($id eq 'indented_code_block'){
             return "<pre><code>" . join ( "", map { to_html( $_ ) } @children ) . "</code></pre>\n"
@@ -339,10 +374,10 @@ sub to_html{
             return join ( "\n", map { to_html( $_ ) } @children );
         }
         elsif ($id eq 'paragraph'){
-            warn dump_node $id, @children;
+#            warn dump_node $id, @children;
             my $text = join ( "\n", map { to_html( $_ ) } @children );
             $text =~ s/\n+$//;
-            warn "# $id\'s text:\n'$text'";
+#            warn "# $id\'s text:\n'$text'";
             return "<p>" . $text . "</p>\n";
         }
         elsif ($id eq 'paragraph_lines'){

@@ -16,8 +16,8 @@ sub filter {
     $input =~ s/\\t/\t/g;
     # handle quoted text
     if ($input =~ m/q{(.+?)}/){
-        $input =~ s/^q{//;
-        $input =~ s/}$//;
+        $input =~ s/(^|\n)q{/$1/gs;
+        $input =~ s/}\n/\n/gs;
     }
 #    warn "filter: $input";
 
